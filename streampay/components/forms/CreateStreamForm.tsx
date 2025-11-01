@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,20 @@ import { formatWeiToEther, formatDuration } from '@/lib/utils';
 import { Calculator, Clock, DollarSign, User, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function CreateStreamForm() {
+// 1. ADD THIS INTERFACE
+interface CreateStreamFormProps {
+  initialValues?: {
+    recipient: string;
+    amount: string;
+    duration: number;
+    durationUnit: 'seconds' | 'minutes' | 'hours' | 'days';
+    streamType?: string;
+    description?: string;
+  } | null;
+}
+
+// 2. UPDATE COMPONENT SIGNATURE TO ACCEPT PROPS
+export default function CreateStreamForm({ initialValues }: CreateStreamFormProps) {
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [duration, setDuration] = useState('');
@@ -22,20 +35,38 @@ export default function CreateStreamForm() {
 
   const { createStream, isPending } = useCreateStream();
 
-  // Calculate values
-  const durationSeconds = duration ? parseInt(duration) * 3600 : 0; // Convert hours to seconds
+  // 3. ADD THIS useEffect TO AUTO-POPULATE FORM WHEN AI PARSES DATA
+  useEffect(() => {
+    if (initialValues) {
+      // Convert duration to hours (your form uses hours)
+      const durationInHours = 
+        initialValues.durationUnit === 'days' ? initialValues.duration * 24 :
+        initialValues.durationUnit === 'hours' ? initialValues.duration :
+        initialValues.durationUnit === 'minutes' ? initialValues.duration / 60 :
+        initialValues.duration / 3600; // seconds to hours
+      
+      setRecipient(initialValues.recipient);
+      setAmount(initialValues.amount);
+      setDuration(durationInHours.toString());
+      if (initialValues.streamType) setStreamType(initialValues.streamType as StreamType);
+      if (initialValues.description) setDescription(initialValues.description);
+    }
+  }, [initialValues]);
+
+  // Calculate values (KEEP AS IS)
+  const durationSeconds = duration ? parseInt(duration) * 3600 : 0;
   const amountWei = amount ? RATE_HELPERS.parseToWei(amount) : 0n;
   const flowRateWei = durationSeconds > 0 ? amountWei / BigInt(durationSeconds) : 0n;
   const flowRateUsd = flowRateWei > 0 ? RATE_HELPERS.weiSecondToUsdHour(flowRateWei) : 0;
 
-  // Calculate amount from USD rate
+  // Calculate amount from USD rate (KEEP AS IS)
   const handleUsdRateChange = (value: string) => {
     setUsdRate(value);
     if (value && duration) {
       const usdPerHour = parseFloat(value);
       const hours = parseFloat(duration);
       const totalUsd = usdPerHour * hours;
-      const totalEth = totalUsd / 2000; // Assuming $2000 per ETH
+      const totalEth = totalUsd / 2000;
       setAmount(totalEth.toString());
     }
   };
